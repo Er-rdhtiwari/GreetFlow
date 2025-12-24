@@ -1,14 +1,3 @@
-manage_aws_auth_configmap = true
-
-aws_auth_users = [
-  {
-    userarn  = "arn:aws:iam::253484721204:user/Admin"
-    username = "admin"
-    groups   = ["system:masters"]
-  }
-]
-
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.24.2"
@@ -23,6 +12,19 @@ module "eks" {
   subnet_ids = var.private_subnet_ids
 
   enable_irsa = true
+
+  access_entries = {
+    admin_user = {
+      principal_arn = "arn:aws:iam::253484721204:user/Admin"
+
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+  }
 
   eks_managed_node_groups = {
     default = {
