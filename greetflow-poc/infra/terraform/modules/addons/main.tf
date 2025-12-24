@@ -4,12 +4,27 @@ resource "helm_release" "aws_load_balancer_controller" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
 
-  set { name = "clusterName", value = var.cluster_name }
-  set { name = "region",      value = var.region }
-  set { name = "vpcId",       value = var.vpc_id }
+  set {
+    name  = "clusterName"
+    value = var.cluster_name
+  }
+  set {
+    name  = "region"
+    value = var.region
+  }
+  set {
+    name  = "vpcId"
+    value = var.vpc_id
+  }
 
-  set { name = "serviceAccount.create", value = "true" }
-  set { name = "serviceAccount.name",   value = "aws-load-balancer-controller" }
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = var.alb_role_arn
@@ -22,13 +37,31 @@ resource "helm_release" "external_dns" {
   chart      = "external-dns"
   namespace  = "kube-system"
 
-  set { name = "provider", value = "aws" }
-  set { name = "policy",   value = "sync" }
-  set { name = "txtOwnerId", value = var.cluster_name }
-  set { name = "domainFilters[0]", value = var.domain_filter }
+  set {
+    name  = "provider"
+    value = "aws"
+  }
+  set {
+    name  = "policy"
+    value = "sync"
+  }
+  set {
+    name  = "txtOwnerId"
+    value = var.cluster_name
+  }
+  set {
+    name  = "domainFilters[0]"
+    value = var.domain_filter
+  }
 
-  set { name = "serviceAccount.create", value = "true" }
-  set { name = "serviceAccount.name",   value = "external-dns" }
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+  set {
+    name  = "serviceAccount.name"
+    value = "external-dns"
+  }
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = var.external_dns_role_arn
@@ -36,16 +69,25 @@ resource "helm_release" "external_dns" {
 }
 
 resource "helm_release" "external_secrets" {
-  name       = "external-secrets"
-  repository = "https://charts.external-secrets.io"
-  chart      = "external-secrets"
-  namespace  = "external-secrets"
+  name             = "external-secrets"
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  namespace        = "external-secrets"
   create_namespace = true
 
-  set { name = "installCRDs", value = "true" }
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
 
-  set { name = "serviceAccount.create", value = "true" }
-  set { name = "serviceAccount.name",   value = "external-secrets" }
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+  set {
+    name  = "serviceAccount.name"
+    value = "external-secrets"
+  }
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = var.external_secrets_role_arn
