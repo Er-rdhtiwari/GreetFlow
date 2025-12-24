@@ -75,6 +75,11 @@ resource "helm_release" "external_secrets" {
   namespace        = "external-secrets"
   create_namespace = true
 
+  # Make Helm behave like your CLI command: --wait --timeout
+  wait    = true
+  atomic  = true
+  timeout = 600
+
   set {
     name  = "installCRDs"
     value = "true"
@@ -94,30 +99,44 @@ resource "helm_release" "external_secrets" {
   }
 }
 
-
+# REAL wait: CRD must exist + be Established before we create ClusterSecretStore
 resource "null_resource" "wait_for_external_secrets_crds" {
   depends_on = [helm_release.external_secrets]
 
+  # Rerun only if you change key inputs (optional but good practice)
+  triggers = {
+    role_arn = var.external_secrets_role_arn
+    region   = var.region
+  }
+
   provisioner "local-exec" {
-    command = "kubectl get crd clustersecretstores.external-secrets.io >/dev/null 2>&1"
+    interpreter = ["/bin/bash", "-lc"]
+    command = <<-EOT
+      set -euo pipefail
+      ns="external-secrets"
+
+      for crd in \
+        clustersecretstores.external-secrets.io \
+        secretstores.external-secrets.io \
+        externalsecrets.external-secrets.io
+      do
+        echo "Waiting for CRD: $crd"
+        until kubectl get crd "$crd" >/dev/null 2>&1; do sleep 2; done
+        kubectl wait --for=condition=Established --timeout=5m "crd/$crd" >/dev/null
+      done
+
+      # Optional: ensure controller is actually up
+      kubectl -n "$ns" wait --for=condition=Available deploy --all --timeout=5m >/dev/null
+      echo "External Secrets CRDs + deployments are ready."
+    EOT
   }
 }
 
-
-resource "time_sleep" "wait_for_external_secrets_crds" {
-  depends_on      = [helm_release.external_secrets]
-  create_duration = "30s"
-}
-
-# ClusterSecretStore used by app ExternalSecret
 resource "kubernetes_manifest" "cluster_secret_store" {
-  depends_on = [
-    helm_release.external_secrets,
-    null_resource.wait_for_external_secrets_crds,
-    time_sleep.wait_for_external_secrets_crds
-  ]
+  depends_on = [null_resource.wait_for_external_secrets_crds]
+
   manifest = {
-    apiVersion = "external-secrets.io/v1beta1" # change to v1beta1 ONLY if your CRD doesn't support v1
+    apiVersion = "external-secrets.io/v1"
     kind       = "ClusterSecretStore"
     metadata = {
       name = "aws-secretsmanager"

@@ -57,6 +57,15 @@ cd infra/terraform/envs/dev
 terraform apply -auto-approve
 
 ```
+### uninstall the existing release, then re-apply
+```
+helm -n external-secrets list
+helm -n external-secrets uninstall external-secrets
+kubectl delete ns external-secrets --wait=false 2>/dev/null || true
+
+```
+
+
 ### install ESO first, then re-run terraform
 ```bash
 cd infra/terraform/envs/dev
