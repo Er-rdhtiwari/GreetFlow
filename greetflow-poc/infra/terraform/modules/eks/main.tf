@@ -1,3 +1,14 @@
+manage_aws_auth_configmap = true
+
+aws_auth_users = [
+  {
+    userarn  = "arn:aws:iam::253484721204:user/Admin"
+    username = "admin"
+    groups   = ["system:masters"]
+  }
+]
+
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.24.2"
