@@ -1,0 +1,38 @@
+env: dev
+
+image:
+  api:
+    repository: ""   # set via values-dev/prod or --set
+    tag: "local"
+  ui:
+    repository: ""
+    tag: "local"
+
+service:
+  apiPort: 8000
+  uiPort: 3000
+
+ingress:
+  enabled: true
+  host: ""
+  acmCertArn: ""
+  scheme: internet-facing
+
+secrets:
+  enabled: true
+  storeName: aws-secretsmanager
+  awsSecretName: "greetflow/dev/openai"   # overridden in prod values
+  secretKey: "OPENAI_API_KEY"
+  refreshInterval: "1h"
+
+openai:
+  model: "gpt-4o-mini"
+
+ui:
+  nextPublicApiBaseUrl: ""  # keep empty => UI calls relative /api/greet
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  cpuUtilization: 70

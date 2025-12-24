@@ -1,0 +1,16 @@
+env: prod
+
+image:
+  api:
+    repository: "<YOUR_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/greetflow-api"
+    tag: "REPLACE_TAG"
+  ui:
+    repository: "<YOUR_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/greetflow-ui"
+    tag: "REPLACE_TAG"
+
+ingress:
+  host: "greet.rdhcloudlab.com"
+  acmCertArn: "REPLACE_ACM_ARN"
+
+secrets:
+  awsSecretName: "greetflow/prod/openai"

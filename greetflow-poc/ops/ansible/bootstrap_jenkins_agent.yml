@@ -1,0 +1,52 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Update apt
+      apt:
+        update_cache: yes
+
+    - name: Install base packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - unzip
+          - git
+          - jq
+          - python3
+          - python3-pip
+        state: present
+
+    - name: Install Docker
+      shell: |
+        apt-get update
+        apt-get install -y docker.io
+        systemctl enable docker
+        systemctl start docker
+
+    - name: Add current user to docker group (optional)
+      shell: |
+        usermod -aG docker {{ ansible_user }}
+      ignore_errors: true
+
+    - name: Install AWS CLI v2
+      shell: |
+        curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+        unzip -o /tmp/awscliv2.zip -d /tmp
+        /tmp/aws/install --update
+
+    - name: Install kubectl
+      shell: |
+        curl -sSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -sSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x /usr/local/bin/kubectl
+
+    - name: Install Helm
+      shell: |
+        curl -sSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+    - name: Install Terraform
+      shell: |
+        wget -qO- https://apt.releases.hashicorp.com/gpg | gpg --dearmor > /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
+        apt-get update
+        apt-get install -y terraform

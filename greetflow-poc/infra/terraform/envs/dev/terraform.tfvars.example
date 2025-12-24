@@ -1,0 +1,7 @@
+region      = "ap-south-1"
+domain_name = "rdhcloudlab.com"
+cluster_name = "greetflow-dev-eks"
+tags = {
+  project = "greetflow"
+  env     = "dev"
+}

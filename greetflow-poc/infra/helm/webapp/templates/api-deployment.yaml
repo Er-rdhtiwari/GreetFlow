@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: greetflow-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: greetflow-api
+  template:
+    metadata:
+      labels:
+        app: greetflow-api
+    spec:
+      serviceAccountName: greetflow-app
+      containers:
+        - name: api
+          image: "{{ .Values.image.api.repository }}:{{ .Values.image.api.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.apiPort }}
+          env:
+            - name: APP_ENV
+              value: "{{ .Values.env }}"
+            - name: OPENAI_MODEL
+              value: "{{ .Values.openai.model }}"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: greetflow-openai
+                  key: {{ .Values.secrets.secretKey | quote }}
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.apiPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.apiPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 20

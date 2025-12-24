@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: greetflow-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: greetflow-ui
+  template:
+    metadata:
+      labels:
+        app: greetflow-ui
+    spec:
+      serviceAccountName: greetflow-app
+      containers:
+        - name: ui
+          image: "{{ .Values.image.ui.repository }}:{{ .Values.image.ui.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.uiPort }}
+          env:
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "{{ .Values.ui.nextPublicApiBaseUrl }}"

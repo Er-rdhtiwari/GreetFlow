@@ -1,0 +1,76 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_REGION = "ap-south-1"
+    ECR_API_REPO = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/greetflow-api"
+    ECR_UI_REPO  = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/greetflow-ui"
+    DEV_HOST = "https://greet-dev.rdhcloudlab.com"
+    PROD_HOST = "https://greet.rdhcloudlab.com"
+    DEV_CLUSTER = "greetflow-dev-eks"
+    PROD_CLUSTER = "greetflow-prod-eks"
+  }
+
+  stages {
+    stage("Checkout") {
+      steps { checkout scm }
+    }
+
+    stage("Unit Tests (API)") {
+      steps {
+        sh """
+          docker build -t greetflow-api-test:${GIT_COMMIT.take(7)} apps/api
+          docker run --rm --entrypoint pytest greetflow-api-test:${GIT_COMMIT.take(7)} -q
+        """
+      }
+    }
+
+    stage("Build & Push Images (ECR)") {
+      steps {
+        script {
+          def sha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          env.IMAGE_TAG = sha
+        }
+        sh """
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+          docker build -t ${ECR_API_REPO}:${IMAGE_TAG} apps/api
+          docker build -t ${ECR_UI_REPO}:${IMAGE_TAG} apps/ui
+
+          docker push ${ECR_API_REPO}:${IMAGE_TAG}
+          docker push ${ECR_UI_REPO}:${IMAGE_TAG}
+        """
+      }
+    }
+
+    stage("Deploy DEV") {
+      steps {
+        sh "bash scripts/deploy_dev.sh ${IMAGE_TAG}"
+      }
+    }
+
+    stage("Smoke Test DEV") {
+      steps {
+        sh "bash scripts/smoke_test.sh ${DEV_HOST}"
+      }
+    }
+
+    stage("Manual Approval") {
+      steps {
+        input message: "Promote the SAME image tag (${IMAGE_TAG}) to PROD?"
+      }
+    }
+
+    stage("Deploy PROD") {
+      steps {
+        sh "bash scripts/promote_prod.sh ${IMAGE_TAG}"
+      }
+    }
+
+    stage("Smoke Test PROD") {
+      steps {
+        sh "bash scripts/smoke_test.sh ${PROD_HOST}"
+      }
+    }
+  }
+}
