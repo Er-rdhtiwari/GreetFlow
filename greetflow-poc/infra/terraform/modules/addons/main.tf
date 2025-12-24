@@ -94,6 +94,16 @@ resource "helm_release" "external_secrets" {
   }
 }
 
+
+resource "null_resource" "wait_for_external_secrets_crds" {
+  depends_on = [helm_release.external_secrets]
+
+  provisioner "local-exec" {
+    command = "kubectl get crd clustersecretstores.external-secrets.io >/dev/null 2>&1"
+  }
+}
+
+
 resource "time_sleep" "wait_for_external_secrets_crds" {
   depends_on      = [helm_release.external_secrets]
   create_duration = "30s"
@@ -101,10 +111,13 @@ resource "time_sleep" "wait_for_external_secrets_crds" {
 
 # ClusterSecretStore used by app ExternalSecret
 resource "kubernetes_manifest" "cluster_secret_store" {
-  depends_on = [time_sleep.wait_for_external_secrets_crds]
-
+  depends_on = [
+    helm_release.external_secrets,
+    null_resource.wait_for_external_secrets_crds
+    time_sleep.wait_for_external_secrets_crds
+  ]
   manifest = {
-    apiVersion = "external-secrets.io/v1" # change to v1beta1 ONLY if your CRD doesn't support v1
+    apiVersion = "external-secrets.io/v1beta1" # change to v1beta1 ONLY if your CRD doesn't support v1
     kind       = "ClusterSecretStore"
     metadata = {
       name = "aws-secretsmanager"

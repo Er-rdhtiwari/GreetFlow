@@ -35,6 +35,29 @@ terraform apply -auto-approve \
 terraform apply -auto-approve
 ```
 
+
+
+```
+# install ESO manually once
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo update
+
+kubectl create ns external-secrets --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install external-secrets external-secrets/external-secrets \
+  -n external-secrets \
+  --set installCRDs=true
+
+# confirm CRDs exist
+kubectl get crd | grep external-secrets
+kubectl get crd clustersecretstores.external-secrets.io
+
+# now re-run terraform apply
+cd infra/terraform/envs/dev
+terraform apply -auto-approve
+
+```
+### install ESO first, then re-run terraform
 ```bash
 cd infra/terraform/envs/dev
 terraform apply -auto-approve
