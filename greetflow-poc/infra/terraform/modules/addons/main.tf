@@ -113,7 +113,7 @@ resource "time_sleep" "wait_for_external_secrets_crds" {
 resource "kubernetes_manifest" "cluster_secret_store" {
   depends_on = [
     helm_release.external_secrets,
-    null_resource.wait_for_external_secrets_crds
+    null_resource.wait_for_external_secrets_crds,
     time_sleep.wait_for_external_secrets_crds
   ]
   manifest = {
