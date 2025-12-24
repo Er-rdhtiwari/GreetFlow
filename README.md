@@ -21,9 +21,22 @@ A very small, production-style PoC:
 ---
 
 ## Step 1) Terraform apply (DEV first)
-```bash
+
+EKS cluster is being created in the same terraform apply, but the Kubernetes provider (used by kubernetes_manifest + helm_release) needs a working kube API endpoint + token at plan/apply time.
+```
 cd infra/terraform/envs/dev
 terraform init
-terraform apply -auto-approve
+# Step 1: Create VPC + EKS only
+terraform apply -auto-approve \
+  -target=module.vpc \
+  -target=module.eks
 
+# Step 2: Now apply everything (addons + helm + k8s manifests)
+terraform apply -auto-approve
+```
+
+```bash
+cd infra/terraform/envs/dev
+terraform apply -auto-approve
 terraform output
+```
