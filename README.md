@@ -124,6 +124,41 @@ kubectl -n greetflow-dev patch ingress greetflow --type merge \
 
 ```
 
+# smoke_test is still failing for DNS, not for Kubernetes.
+
+### Fix 1 (fast): create the Route53 record manually (CNAME)
+
+```
+ALB_DNS="k8s-greetflo-greetflo-999d2083b7-1618040440.ap-south-1.elb.amazonaws.com"
+
+HZ_ID=$(aws route53 list-hosted-zones-by-name \
+  --dns-name rdhcloudlab.com \
+  --query 'HostedZones[0].Id' --output text | sed 's|/hostedzone/||')
+
+cat >/tmp/greet-dev.json <<EOF
+{
+  "Comment": "greet-dev -> ALB",
+  "Changes": [{
+    "Action": "UPSERT",
+    "ResourceRecordSet": {
+      "Name": "greet-dev.rdhcloudlab.com",
+      "Type": "CNAME",
+      "TTL": 60,
+      "ResourceRecords": [{ "Value": "${ALB_DNS}" }]
+    }
+  }]
+}
+EOF
+
+aws route53 change-resource-record-sets --hosted-zone-id "$HZ_ID" --change-batch file:///tmp/greet-dev.json
+
+```
+
+
+
+
+
+
 
 # Important but can ignored as scipt issues has been resolved.
 # Step 2: install ESO manually once

@@ -88,3 +88,27 @@ module "addons" {
   external_dns_role_arn = module.iam_irsa.external_dns_role_arn
   external_secrets_role_arn = module.iam_irsa.external_secrets_role_arn
 }
+
+# Download the official policy JSON and keep it in repo (next step)
+resource "aws_iam_policy" "alb_controller" {
+  name   = "${var.cluster_name}-AWSLoadBalancerControllerIAMPolicy"
+  policy = file("${path.module}/../../modules/iam_irsa/policies/aws_load_balancer_controller_iam_policy.json")
+}
+
+module "alb_irsa" {
+  source = "../../modules/iam_irsa"
+
+  # whatever inputs you already use (role name, oidc provider, namespace, sa name, tags...)
+  # example (adjust to your module’s variables):
+  role_name         = "${var.cluster_name}-eks-alb-controller"
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  namespace        = "kube-system"
+  service_account  = "aws-load-balancer-controller"
+
+  policy_arns = [
+    aws_iam_policy.alb_controller.arn
+  ]
+
+  tags = var.tags
+}
