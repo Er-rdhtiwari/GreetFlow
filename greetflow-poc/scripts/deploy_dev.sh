@@ -26,6 +26,6 @@ helm upgrade --install greetflow-dev infra/helm/webapp \
   --set image.ui.repository="${UI_REPO}" \
   --set image.ui.tag="${TAG}" \
   --set ingress.acmCertArn="${ACM_ARN}" \
-  --wait --timeout 10m --atomic
+  --wait --timeout 20m 
 
 echo "✅ Deployed DEV with tag ${TAG}"
