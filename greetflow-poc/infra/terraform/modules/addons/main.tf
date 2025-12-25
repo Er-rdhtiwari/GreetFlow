@@ -148,13 +148,10 @@ resource "null_resource" "cluster_secret_store" {
     command = <<-EOT
       set -euo pipefail
 
-      # optional: ensure SA exists
       until kubectl -n external-secrets get sa external-secrets >/dev/null 2>&1; do sleep 2; done
 
-      # CRDs were just installed; kubectl can have stale discovery cache
       rm -rf "$HOME/.kube/cache/discovery" "$HOME/.kube/http-cache" || true
 
-      # wait until discovery sees the API group + resource
       for i in {1..90}; do
         if kubectl api-resources --api-group=external-secrets.io 2>/dev/null | awk 'NR>1{print $1}' | grep -qx "clustersecretstores"; then
           break
@@ -162,27 +159,27 @@ resource "null_resource" "cluster_secret_store" {
         sleep 2
       done
 
-      served="$(kubectl get crd clustersecretstores.external-secrets.io -o jsonpath='{range .spec.versions[?(@.served==true)]}{.name}{"\\n"}{end}' | tr -d '\\r' || true)"
+      # Get served versions as a space-separated list (e.g. "v1 v1beta1")
+      served="$(kubectl get crd clustersecretstores.external-secrets.io -o jsonpath='{.spec.versions[?(@.served==true)].name}' | tr -d '\r' || true)"
 
       if [ -z "$served" ]; then
         echo "ERROR: Could not read served versions from CRD clustersecretstores.external-secrets.io"
-        kubectl get crd clustersecretstores.external-secrets.io -o yaml | sed -n '1,120p' || true
+        kubectl get crd clustersecretstores.external-secrets.io -o yaml | sed -n '1,160p' || true
         exit 1
       fi
 
-      if echo "$served" | grep -qx "v1"; then
+      if echo " $served " | grep -q " v1 "; then
         ver="v1"
-      elif echo "$served" | grep -qx "v1beta1"; then
+      elif echo " $served " | grep -q " v1beta1 "; then
         ver="v1beta1"
-      elif echo "$served" | grep -qx "v1alpha1"; then
+      elif echo " $served " | grep -q " v1alpha1 "; then
         ver="v1alpha1"
       else
-        ver="$(echo "$served" | head -n1)"
+        ver="$(awk '{print $1}' <<<"$served")"
       fi
 
       echo "Using ClusterSecretStore apiVersion: external-secrets.io/$ver"
-      echo "Served versions were:"
-      echo "$served"
+      echo "Served versions were: $served"
 
       cat <<YAML | kubectl apply -f -
       apiVersion: external-secrets.io/$ver
@@ -193,7 +190,7 @@ resource "null_resource" "cluster_secret_store" {
         provider:
           aws:
             service: SecretsManager
-            region: $var.region
+            region: ${var.region}
             auth:
               jwt:
                 serviceAccountRef:
@@ -206,4 +203,3 @@ resource "null_resource" "cluster_secret_store" {
     EOT
   }
 }
-
