@@ -23,22 +23,19 @@ A very small, production-style PoC:
 ## Step 1) Terraform apply (DEV first)
 
 EKS cluster is being created in the same terraform apply, but the Kubernetes provider (used by kubernetes_manifest + helm_release) needs a working kube API endpoint + token at plan/apply time.
+
+# Step 1: Create VPC + EKS only
 ```
 cd infra/terraform/envs/dev
 terraform init
-# Step 1: Create VPC + EKS only
 terraform apply -auto-approve \
   -target=module.vpc \
   -target=module.eks
-
-# Step 2: Now apply everything (addons + helm + k8s manifests)
-terraform apply -auto-approve
 ```
 
 
-
+# Step 2: install ESO manually once
 ```
-# install ESO manually once
 helm repo add external-secrets https://charts.external-secrets.io
 helm repo update
 
@@ -53,10 +50,20 @@ kubectl get crd | grep external-secrets
 kubectl get crd clustersecretstores.external-secrets.io
 
 # now re-run terraform apply
-cd infra/terraform/envs/dev
-terraform apply -auto-approve
+# cd infra/terraform/envs/dev
+# terraform apply -auto-approve
 
 ```
+
+# Step 3
+
+```
+terraform import module.addons.helm_release.external_secrets external-secrets/external-secrets
+terraform plan
+terraform apply
+```
+
+
 ### uninstall the existing release, then re-apply
 ```
 helm -n external-secrets list
@@ -64,7 +71,14 @@ helm -n external-secrets uninstall external-secrets
 kubectl delete ns external-secrets --wait=false 2>/dev/null || true
 
 ```
+## OR: Option B — Import the existing Helm release into Terraform state
+```
+terraform import module.addons.helm_release.external_secrets external-secrets/external-secrets
+terraform plan
+terraform apply
 
+
+```
 
 ### install ESO first, then re-run terraform
 ```bash

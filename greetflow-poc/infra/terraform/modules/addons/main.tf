@@ -132,30 +132,45 @@ resource "null_resource" "wait_for_external_secrets_crds" {
   }
 }
 
-resource "kubernetes_manifest" "cluster_secret_store" {
+# Remove this (it fails at plan time):
+# resource "kubernetes_manifest" "cluster_secret_store" { ... }
+
+resource "null_resource" "cluster_secret_store" {
   depends_on = [null_resource.wait_for_external_secrets_crds]
 
-  manifest = {
-    apiVersion = "external-secrets.io/v1"
-    kind       = "ClusterSecretStore"
-    metadata = {
-      name = "aws-secretsmanager"
-    }
-    spec = {
-      provider = {
-        aws = {
-          service = "SecretsManager"
-          region  = var.region
-          auth = {
-            jwt = {
-              serviceAccountRef = {
-                name      = "external-secrets"
-                namespace = "external-secrets"
-              }
-            }
-          }
-        }
-      }
-    }
+  # Re-apply if anything meaningful changes
+  triggers = {
+    region   = var.region
+    role_arn = var.external_secrets_role_arn
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-lc"]
+    command = <<-EOT
+      set -euo pipefail
+
+      # optional: ensure SA exists
+      until kubectl -n external-secrets get sa external-secrets >/dev/null 2>&1; do sleep 2; done
+
+      cat <<YAML | kubectl apply -f -
+      apiVersion: external-secrets.io/v1beta1
+      kind: ClusterSecretStore
+      metadata:
+        name: aws-secretsmanager
+      spec:
+        provider:
+          aws:
+            service: SecretsManager
+            region: ${var.region}
+            auth:
+              jwt:
+                serviceAccountRef:
+                  name: external-secrets
+                  namespace: external-secrets
+      YAML
+
+      kubectl get clustersecretstore aws-secretsmanager -o yaml >/dev/null
+      echo "ClusterSecretStore created/updated."
+    EOT
   }
 }
