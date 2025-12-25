@@ -33,7 +33,22 @@ terraform apply -auto-approve \
   -target=module.eks
 ```
 
+# Step 2:
+```
+aws secretsmanager create-secret \
+  --name greetflow/dev/openai \
+  --secret-string '{"OPENAI_API_KEY":"REPLACE_ME"}' \
+  --region ap-south-1
 
+aws secretsmanager create-secret \
+  --name greetflow/prod/openai \
+  --secret-string '{"OPENAI_API_KEY":"REPLACE_ME"}' \
+  --region ap-south-1
+
+```
+
+
+# Important but can ignored as scipt issues has been resolved.
 # Step 2: install ESO manually once
 ```
 helm repo add external-secrets https://charts.external-secrets.io
